@@ -18,8 +18,8 @@ class Trainer:
                  dataset_name: str = "sentence-transformers/parallel-sentences-ccmatrix",
                  dataset_config: str = "en-zh",
                  dataset_split: str = "train",
-                 dataset_column_target: str = "english",
-                 dataset_column_source: str = "non_english",
+                 dataset_column_target: str = "non_english",
+                 dataset_column_source: str = "english",
                  model_target: str = "roberta-base",
                  model_source: str = "roberta-base",
                  attn_implementation: str = "sdpa",
@@ -37,11 +37,17 @@ class Trainer:
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s %(message)s'))
         self.logger.addHandler(file_handler)
-        # model
+        # target model initialized from source
         model_config = dict(torch_dtype=torch_dtype, attn_implementation=attn_implementation)
         self.model_target = AutoModelForSequenceClassification.from_pretrained(model_source, **model_config)
         self.model_target.train()
+        # initialize embedding matrix of the target model
+        for module_ in self.model_target.named_modules():
+            if isinstance(module_[1], torch.nn.modules.sparse.Embedding):
+                module_[1].weight.data.normal_(mean=0.0, std=self.model_target.config.initializer_range)
+        # target tokenizer
         self.tokenizer_target = AutoTokenizer.from_pretrained(model_target)
+        # source model
         self.model_source = AutoModelForSequenceClassification.from_pretrained(model_source, **model_config)
         self.model_source.eval()
         self.tokenizer_source = AutoTokenizer.from_pretrained(model_source)
@@ -104,16 +110,18 @@ class Trainer:
     def single_step(self, batch: Dict[str, Any], max_length: int = 256, temperature: float = 1) -> float:
         self.optimizer.zero_grad()
         encode_config = dict(return_tensors="pt", max_length=max_length, truncation=True, padding='max_length')
+
         # get last hidden state of the target model
         encode_target = self.tokenizer_target(batch[self.dataset_column_target], **encode_config)
-        encode_target["inputs_embeds"] = self.unwrap(self.model_target).embeddings(encode_target.pop("input_ids"))
+        output_target = self.model_target(**{k: v.to(self.device) for k, v in encode_target}, output_hidden_states=True)
+        embedding_target = output_target.hidden_states[-1].mean(1)  # batch x dim
+
+        # get last hidden state of the source model
         with torch.no_grad():
-            output_target = self.model_target(**{k: v.to(self.device) for k, v in encode_target}, output_hidden_states=True)
-            embedding_target = output_target.hidden_states[-1].mean(1)  # batch x dim
-            # get last hidden state of the source model
-            encode_source = self.tokenizer_source(batch[self.dataset_column_source], encode_config)
+            encode_source = self.tokenizer_source(batch[self.dataset_column_source], **encode_config)
             output_source = self.model_source(**{k: v.to(self.device) for k, v in encode_source}, output_hidden_states=True)
             embedding_source = output_source.hidden_states[-1].mean(1)  # batch x dim
+
         # compute NCE loss
         cos_sim = torch.nn.CosineSimilarity(dim=3)
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
@@ -138,8 +146,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dataset-name', type=str, default="sentence-transformers/parallel-sentences-ccmatrix")
     parser.add_argument('-c', '--dataset-config', type=str, default="en-zh")
     parser.add_argument('--dataset-split', type=str, default="train")
-    parser.add_argument('--dataset-column-target', type=str, default="english")
-    parser.add_argument('--dataset-column-source', type=str, default="non_english")
+    parser.add_argument('--dataset-column-target', type=str, default="non_english")
+    parser.add_argument('--dataset-column-source', type=str, default="english")
     parser.add_argument('--attn-implementation', type=str, default="sdpa")
     parser.add_argument('--parameter-prefix', type=str, default="embeddings")
     parser.add_argument('--torch-dtype', type=str, default="torch.bfloat16")
