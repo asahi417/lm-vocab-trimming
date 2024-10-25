@@ -58,7 +58,16 @@ class Trainer:
         # optimizers
         params = [p for n, p in self.model_source.named_parameters() if n.startswith(parameter_prefix)]
         self.optimizer = torch.optim.AdamW([{"params": params, "weight_decay": weight_decay}], lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, lr_warmup)
+        # scheduler
+
+        def lr_lambda(current_step: int):
+            current_step += 1
+            if current_step < lr_warmup:
+                return float(current_step) / float(max(1, lr_warmup))
+            return 1
+
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda, -1)
+        # self.scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, lr_warmup)
         self.logger.info(f"[learnable parameters] {int(sum([prod(i.shape) for i in params])):,}")
         # device
         self.parallel = torch.cuda.device_count() > 1
