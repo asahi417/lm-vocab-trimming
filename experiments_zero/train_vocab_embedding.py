@@ -67,7 +67,6 @@ class Trainer:
             return 1
 
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda, -1)
-        # self.scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, lr_warmup)
         self.logger.info(f"[learnable parameters] {int(sum([prod(i.shape) for i in params])):,}")
         # device
         self.parallel = torch.cuda.device_count() > 1
@@ -107,7 +106,7 @@ class Trainer:
         encode_config = dict(return_tensors="pt", max_length=max_length, truncation=True, padding='max_length')
         # get last hidden state of the target model
         encode_target = self.tokenizer_target(batch[self.dataset_column_target], **encode_config)
-        encode_target["inputs_embeds"] = self.model_target.embeddings(encode_target.pop("input_ids"))
+        encode_target["inputs_embeds"] = self.unwrap(self.model_target).embeddings(encode_target.pop("input_ids"))
         with torch.no_grad():
             output_target = self.model_target(**{k: v.to(self.device) for k, v in encode_target}, output_hidden_states=True)
             embedding_target = output_target.hidden_states[-1].mean(1)  # batch x dim
