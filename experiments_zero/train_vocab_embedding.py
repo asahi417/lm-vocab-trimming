@@ -34,7 +34,7 @@ class Trainer:
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         # target model initialized from source
-        model_config = dict(torch_dtype=torch_dtype, attn_implementation=attn_implementation)
+        model_config = dict(attn_implementation=attn_implementation)
         self.model_target = AutoModelForSequenceClassification.from_pretrained(model_source, **model_config)
         self.model_target.train()
         # initialize embedding matrix of the target model
