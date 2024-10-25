@@ -46,6 +46,7 @@ class Trainer:
             if isinstance(module_[1], torch.nn.modules.sparse.Embedding):
                 module_[1].weight.data.normal_(mean=0.0, std=self.model_target.config.initializer_range)
                 embedding_module_names.append(module_[0])
+        assert len(embedding_module_names) > 0, "No embedding to train"
         # target tokenizer
         self.tokenizer_target = AutoTokenizer.from_pretrained(model_target)
         # source model
@@ -64,6 +65,7 @@ class Trainer:
         torch.manual_seed(self.random_seed)
         # optimizers
         params = [p for n, p in self.model_source.named_parameters() if any(i in n for i in embedding_module_names)]
+        assert len(params) > 0, "No embedding to train"
         self.optimizer = torch.optim.AdamW([{"params": params, "weight_decay": weight_decay}], lr=lr)
         # scheduler
 
@@ -125,6 +127,8 @@ class Trainer:
 
         # compute NCE loss
         cos_sim = torch.nn.CosineSimilarity(dim=3)
+        print(embedding_target.unsqueeze(1).shape)
+        print(embedding_source.unsqueeze(0).shape)
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
         logit_p = torch.diagonal(distance, 0)
         denominator = torch.sum(torch.tril(distance, diagonal=-1))
