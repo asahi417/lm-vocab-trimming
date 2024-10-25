@@ -10,6 +10,8 @@ import numpy as np
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+
 
 class Trainer:
 
@@ -31,11 +33,6 @@ class Trainer:
         # config
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        self.logger = logging.getLogger()
-        file_handler = logging.FileHandler(f'{self.output_dir}/training.log')
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s %(message)s'))
-        self.logger.addHandler(file_handler)
         # target model initialized from source
         model_config = dict(torch_dtype=torch_dtype, attn_implementation=attn_implementation)
         self.model_target = AutoModelForSequenceClassification.from_pretrained(model_source, **model_config)
@@ -57,7 +54,7 @@ class Trainer:
         self.dataset = load_dataset(dataset_name, dataset_config, split=dataset_split)
         self.dataset_column_target = dataset_column_target
         self.dataset_column_source = dataset_column_source
-        self.logger.info(f"[dataset size] {len(self.dataset):,}")
+        logging.info(f"[dataset size] {len(self.dataset):,}")
         # fix random seed
         self.random_seed = random_seed
         np.random.seed(self.random_seed)
@@ -76,7 +73,7 @@ class Trainer:
             return 1
 
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda, -1)
-        self.logger.info(f"[learnable parameters] {int(sum([prod(i.shape) for i in params])):,}")
+        logging.info(f"[learnable parameters] {int(sum([prod(i.shape) for i in params])):,}")
         # device
         self.parallel = torch.cuda.device_count() > 1
         self.device = 'cuda' if torch.cuda.device_count() > 0 else 'cpu'
@@ -85,7 +82,7 @@ class Trainer:
             self.model_source = torch.nn.DataParallel(self.model_source)
         self.model_target.to(self.device)
         self.model_source.to(self.device)
-        self.logger.info(f"[device info] parallel={self.parallel}, device={self.device}")
+        logging.info(f"[device info] parallel={self.parallel}, device={self.device}")
 
     def unwrap(self, model):
         if self.parallel:
@@ -102,7 +99,7 @@ class Trainer:
                 loss += self.single_step(batch, max_length, temperature)
                 if b % log_interval == 0:
                     lr = self.optimizer.param_groups[0]['lr']
-                    self.logger.info(f"[epoch={e + 1}/{epoch}, batch={b + 1}/{total_step}] loss={loss/log_interval}, lr={lr}")
+                    logging.info(f"[epoch={e + 1}/{epoch}, batch={b + 1}/{total_step}] loss={loss/log_interval}, lr={lr}")
                     loss = 0
             self.unwrap(self.model_source).save_pretrained(f"{self.output_dir}/epoch_{e}")
             self.tokenizer_source.save_pretrained(f"{self.output_dir}/epoch_{e}")
