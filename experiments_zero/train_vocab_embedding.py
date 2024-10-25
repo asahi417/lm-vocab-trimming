@@ -126,9 +126,7 @@ class Trainer:
             embedding_source = output_source.hidden_states[-1].mean(1)  # batch x dim
 
         # compute NCE loss
-        cos_sim = torch.nn.CosineSimilarity(dim=3)
-        print(embedding_target.unsqueeze(1).shape)
-        print(embedding_source.unsqueeze(0).shape)
+        cos_sim = torch.nn.CosineSimilarity(dim=2)
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
         logit_p = torch.diagonal(distance, 0)
         denominator = torch.sum(torch.tril(distance, diagonal=-1))
