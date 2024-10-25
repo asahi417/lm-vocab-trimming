@@ -27,7 +27,7 @@ class Trainer:
                  attn_implementation: str = "sdpa",
                  torch_dtype: torch.dtype = torch.bfloat16,
                  random_seed: int = 42,
-                 weight_decay: float = 1e-7,
+                 weight_decay: float = 1e-9,
                  lr: float = 0.00002,
                  lr_warmup: int = 100):
         # config
@@ -125,8 +125,11 @@ class Trainer:
         # compute NCE loss
         cos_sim = torch.nn.CosineSimilarity(dim=2)
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
+        print(distance)
         logit_p = torch.diagonal(distance, 0)
+        print(logit_p)
         denominator = torch.sum(torch.tril(distance, diagonal=-1))
+        print(denominator)
         loss = torch.sum(- torch.log(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-5)))
         # backprop
         loss.backward()
