@@ -113,13 +113,13 @@ class Trainer:
 
         # get last hidden state of the target model
         encode_target = self.tokenizer_target(batch[self.dataset_column_target], **encode_config)
-        output_target = self.model_target(**{k: v.to(self.device) for k, v in encode_target}, output_hidden_states=True)
+        output_target = self.model_target(**{k: v.to(self.device) for k, v in encode_target.items()}, output_hidden_states=True)
         embedding_target = output_target.hidden_states[-1].mean(1)  # batch x dim
 
         # get last hidden state of the source model
         with torch.no_grad():
             encode_source = self.tokenizer_source(batch[self.dataset_column_source], **encode_config)
-            output_source = self.model_source(**{k: v.to(self.device) for k, v in encode_source}, output_hidden_states=True)
+            output_source = self.model_source(**{k: v.to(self.device) for k, v in encode_source.items()}, output_hidden_states=True)
             embedding_source = output_source.hidden_states[-1].mean(1)  # batch x dim
 
         # compute NCE loss
