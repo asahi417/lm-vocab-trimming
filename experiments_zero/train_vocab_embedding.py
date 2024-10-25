@@ -124,14 +124,10 @@ class Trainer:
 
         # compute NCE loss
         cos_sim = torch.nn.CosineSimilarity(dim=2)
+        print(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0)))
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
-        print(distance)
         logit_p = torch.diagonal(distance, 0)
-        print(logit_p)
         denominator = torch.sum(torch.tril(distance, diagonal=-1))
-        print(denominator)
-        print(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-5))
-        print(torch.log(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-5)))
         loss = torch.sum(- torch.log(logit_p / (denominator.unsqueeze(-1) + 1e-7)))
         print(loss)
         # backprop
