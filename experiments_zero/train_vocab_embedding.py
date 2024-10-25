@@ -126,9 +126,11 @@ class Trainer:
         cos_sim = torch.nn.CosineSimilarity(dim=2)
         print(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0)))
         distance = torch.exp(cos_sim(embedding_target.unsqueeze(1), embedding_source.unsqueeze(0))/temperature)
+        print(distance)
         logit_p = torch.diagonal(distance, 0)
-        denominator = torch.sum(torch.tril(distance, diagonal=-1))
-        loss = torch.sum(- torch.log(logit_p / (denominator.unsqueeze(-1) + 1e-7)))
+        # denominator = torch.sum(torch.tril(distance, diagonal=-1))
+        denominator = torch.sum(torch.tril(distance))
+        loss = torch.sum(- torch.log(logit_p / denominator.unsqueeze(-1)))
         print(loss)
         # backprop
         loss.backward()
