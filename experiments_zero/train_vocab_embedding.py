@@ -23,7 +23,6 @@ class Trainer:
                  model_target: str = "roberta-base",
                  model_source: str = "roberta-base",
                  attn_implementation: str = "sdpa",
-                 parameter_prefix: str = "embeddings",
                  torch_dtype: torch.dtype = torch.bfloat16,
                  random_seed: int = 42,
                  weight_decay: float = 1e-7,
@@ -42,9 +41,11 @@ class Trainer:
         self.model_target = AutoModelForSequenceClassification.from_pretrained(model_source, **model_config)
         self.model_target.train()
         # initialize embedding matrix of the target model
+        embedding_module_names = []
         for module_ in self.model_target.named_modules():
             if isinstance(module_[1], torch.nn.modules.sparse.Embedding):
                 module_[1].weight.data.normal_(mean=0.0, std=self.model_target.config.initializer_range)
+                embedding_module_names.append(module_[0])
         # target tokenizer
         self.tokenizer_target = AutoTokenizer.from_pretrained(model_target)
         # source model
@@ -62,7 +63,7 @@ class Trainer:
         random.seed(self.random_seed)
         torch.manual_seed(self.random_seed)
         # optimizers
-        params = [p for n, p in self.model_source.named_parameters() if n.startswith(parameter_prefix)]
+        params = [p for n, p in self.model_source.named_parameters() if any(i in n for i in embedding_module_names)]
         self.optimizer = torch.optim.AdamW([{"params": params, "weight_decay": weight_decay}], lr=lr)
         # scheduler
 
@@ -149,7 +150,6 @@ if __name__ == '__main__':
     parser.add_argument('--dataset-column-target', type=str, default="non_english")
     parser.add_argument('--dataset-column-source', type=str, default="english")
     parser.add_argument('--attn-implementation', type=str, default="sdpa")
-    parser.add_argument('--parameter-prefix', type=str, default="embeddings")
     parser.add_argument('--torch-dtype', type=str, default="torch.bfloat16")
     parser.add_argument('--random-seed', type=int, default=42)
     parser.add_argument('--weight-decay', type=float, default=0)
@@ -171,7 +171,6 @@ if __name__ == '__main__':
         model_target=opt.model_target,
         model_source=opt.model_source,
         attn_implementation=opt.attn_implementation,
-        parameter_prefix=opt.parameter_prefix,
         torch_dtype=eval(opt.torch_dtype),
         random_seed=opt.random_seed,
         weight_decay=opt.weight_decay,
