@@ -26,7 +26,7 @@ class Trainer:
                  parameter_prefix: str = "embeddings",
                  torch_dtype: torch.dtype = torch.bfloat16,
                  random_seed: int = 42,
-                 weight_decay: float = 1e-8,
+                 weight_decay: float = 1e-7,
                  lr: float = 0.00002,
                  lr_warmup: int = 100):
         # config
