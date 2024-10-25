@@ -46,6 +46,7 @@ MODEL="vocabtrimmer/bert-base-spanish-wwm-cased.xnli-es.5"
 LA="es"
 EN_MODEL="vocabtrimmer/roberta-base.xnli-en.5"
 python experiments_zero/train_tokenizer.py -r "${EN_MODEL}" --dataset-config "${LA}" -o "ckpts/roberta-base.xnli-en.swap_${LA}" --repo-id "vocabtrimmer/roberta-base.xnli-en.swap_${LA}_tokenizer.untrained"
+
 python experiments_zero/train_vocab_embedding.py --lr 0.000001 -c "en-${LA}" -s "${EN_MODEL}" -t "vocabtrimmer/roberta-base.xnli-en.swap_${LA}_tokenizer.untrained" -o "ckpts/roberta-base.xnli-en.swap_${LA}.1" --repo-id "vocabtrimmer/roberta-base.xnli-en.swap_${LA}.1"
 python experiments_zero/finetune_xnli.py -m "vocabtrimmer/roberta-base.xnli-en.swap_${LA}.1" --skip-train -n "${LA}" -o "ckpts/roberta-base.xnli-en.swap_${LA}.1" --repo-id "vocabtrimmer/roberta-base.xnli-en.swap_${LA}.1"
 python experiments_zero/train_vocab_embedding.py --lr 0.00005 -c "en-${LA}" -s "${EN_MODEL}" -t "vocabtrimmer/roberta-base.xnli-en.swap_${LA}_tokenizer.untrained" -o "ckpts/roberta-base.xnli-en.swap_${LA}.2" --repo-id "vocabtrimmer/roberta-base.xnli-en.swap_${LA}.2"

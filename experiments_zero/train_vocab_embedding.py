@@ -56,7 +56,7 @@ class Trainer:
         random.seed(self.random_seed)
         torch.manual_seed(self.random_seed)
         # optimizers
-        params = [p for n, p in self.model_source.model.named_parameters() if n.startswith(parameter_prefix)]
+        params = [p for n, p in self.model_source.named_parameters() if n.startswith(parameter_prefix)]
         self.optimizer = torch.optim.AdamW([{"params": params, "weight_decay": weight_decay}], lr=lr)
         self.scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, lr_warmup)
         self.logger.info(f"[learnable parameters] {int(sum([prod(i.shape) for i in params])):,}")
