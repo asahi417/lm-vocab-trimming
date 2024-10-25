@@ -131,6 +131,7 @@ class Trainer:
         denominator = torch.sum(torch.tril(distance, diagonal=-1))
         print(denominator)
         print(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-5))
+        print(torch.log(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-5)))
         loss = torch.sum(- torch.log(logit_p / (denominator.unsqueeze(-1) + logit_p + 1e-7)))
         print(loss)
         # backprop
